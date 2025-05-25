@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intelligence Data Network - Investigation Mapping</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+        }
+        
+        html {
+            width: 100%;
+            height: 100%;
+        }
+        
+
+        
+        #graph {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        
+        .node {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.3));
+        }
+        
+        .node:hover {
+            filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.6)) brightness(1.3);
+        }
+        
+        .node.highlighted {
+            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 1)) brightness(1.5);
+            stroke: #ffd700;
+            stroke-width: 4;
+        }
+        
+        .node.dimmed {
+            opacity: 0.2;
+        }
+        
+        .node-label {
+            pointer-events: none;
+            font-size: 11px;
+            font-weight: bold;
+            text-shadow: 0 0 4px rgba(0, 0, 0, 1), 0 0 8px rgba(0, 0, 0, 0.8);
+            fill: #ffffff;
+        }
+        
+        .node-label.dimmed {
+            opacity: 0.3;
+        }
+        
+        .edge {
+            fill: none;
+            stroke-opacity: 0.6;
+            transition: all 0.3s ease;
+        }
+        
+        .edge:hover {
+            stroke-opacity: 1;
+            stroke-width: 3;
+        }
+        
+        .edge.highlighted {
+            stroke: #ffd700;
+            stroke-width: 3;
+            stroke-opacity: 1;
+        }
+        
+        .edge.dimmed {
+            stroke-opacity: 0.1;
+        }
+        
+        .edge-label {
+            font-size: 9px;
+            fill: #cccccc;
+            text-shadow: 0 0 3px rgba(0, 0, 0, 1), 0 0 6px rgba(0, 0, 0, 0.8);
+            pointer-events: none;
+        }
+        
+        .edge-label.dimmed {
+            opacity: 0.3;
+        }
+        
+        #legend {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #333;
+            font-size: 11px;
+            max-height: 40vh;
+            overflow-y: auto;
+        }
+        
+        #legend h3 {
+            margin: 0 0 8px 0;
+            font-size: 13px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            margin-right: 6px;
+            border-radius: 50%;
+        }
+        
+        #info {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #333;
+            max-width: 250px;
+            font-size: 11px;
+        }
+        
+        #info h3 {
+            margin: 0 0 8px 0;
+            font-size: 13px;
+        }
+        
+        #info p {
+            margin: 5px 0;
+        }
+        
+        #investigation-selector {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #333;
+            max-width: 300px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        #investigation-selector h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #ffd700;
+        }
+        
+        .investigation-btn {
+            display: block;
+            width: 100%;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #555;
+            color: #fff;
+            text-align: left;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .investigation-btn:hover {
+            background: rgba(255, 215, 0, 0.2);
+            border-color: #ffd700;
+        }
+        
+        .investigation-btn.active {
+            background: rgba(255, 215, 0, 0.3);
+            border-color: #ffd700;
+            box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+        }
+        
+        .clear-btn {
+            background: rgba(231, 76, 60, 0.2);
+            border-color: #e74c3c;
+        }
+        
+        .clear-btn:hover {
+            background: rgba(231, 76, 60, 0.3);
+        }
+        
+        .investigation-desc {
+            font-size: 10px;
+            color: #aaa;
+            margin-top: 3px;
+        }
+        
+        .tooltip {
+            position: absolute;
+            text-align: left;
+            padding: 10px;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid #666;
+            border-radius: 5px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <svg id="graph" style="background: #0a0a0a;"></svg>
+    <div id="investigation-selector">
+        <h3>Investigation Types</h3>
+        <button class="investigation-btn clear-btn" onclick="clearHighlight()">
+            Clear Selection
+            <div class="investigation-desc">Show all data connections</div>
+        </button>
+    </div>
+    <div id="legend">
+        <h3>Data Categories</h3>
+    </div>
+    <div id="info">
+        <h3>Intelligence Network</h3>
+        <p><strong>Investigation Mapping</strong><br>
+        Select investigation type to see relevant data</p>
+        <p><strong>Tips:</strong><br>
+        • Click investigation types<br>
+        • Drag nodes to rearrange<br>
+        • Zoom with scroll</p>
+    </div>
+    <div class="tooltip"></div>
+
+    <script>
+        // Enhanced data structure with investigation mappings
+        const nodes = [
+            // Original Categories
+            { id: "geospatial", label: "Geospatial Data", type: "category", color: "#FF6B6B" },
+            { id: "temporal", label: "Temporal Data", type: "category", color: "#4ECDC4" },
+            { id: "entity", label: "Entity/Network Data", type: "category", color: "#45B7D1" },
+            { id: "technical", label: "Technical Specs", type: "category", color: "#F7DC6F" },
+            { id: "comms", label: "Communications", type: "category", color: "#BB8FCE" },
+            { id: "financial", label: "Financial/Assets", type: "category", color: "#52BE80" },
+            { id: "activity", label: "Activity/Events", type: "category", color: "#F39C12" },
+            { id: "visual", label: "Visual Evidence", type: "category", color: "#E74C3C" },
+            
+            // New Categories
+            { id: "sigint", label: "Signals Intelligence", type: "category", color: "#3498DB" },
+            { id: "techint", label: "Technical Intelligence", type: "category", color: "#E67E22" },
+            { id: "protective", label: "Protective Intelligence", type: "category", color: "#1ABC9C" },
+            { id: "social", label: "Social Media/Reputation", type: "category", color: "#9B59B6" },
+            
+            // Original Geospatial formats
+            { id: "gps", label: "GPS Coordinates", type: "format", parent: "geospatial" },
+            { id: "satellite", label: "Satellite Imagery", type: "format", parent: "geospatial" },
+            { id: "maps", label: "Annotated Maps", type: "format", parent: "geospatial" },
+            { id: "infrastructure", label: "Port Layouts", type: "format", parent: "geospatial" },
+            
+            // New Geospatial formats
+            { id: "bordercrossing", label: "Border Crossings", type: "format", parent: "geospatial" },
+            { id: "streetlevel", label: "Street-Level Collection", type: "format", parent: "geospatial" },
+            { id: "cameramapping", label: "Camera Mapping", type: "format", parent: "geospatial" },
+            
+            // Temporal formats
+            { id: "timestamps", label: "Date-Time Stamps", type: "format", parent: "temporal" },
+            { id: "timelines", label: "Event Timelines", type: "format", parent: "temporal" },
+            { id: "activitylogs", label: "Activity Logs", type: "format", parent: "temporal" },
+            
+            // Entity formats
+            { id: "individuals", label: "Named Individuals", type: "format", parent: "entity" },
+            { id: "organizations", label: "Organizations", type: "format", parent: "entity" },
+            { id: "relationships", label: "Relationship Maps", type: "format", parent: "entity" },
+            { id: "networks", label: "Network Graphs", type: "format", parent: "entity" },
+            
+            // Technical formats
+            { id: "dronespecs", label: "Drone Specs", type: "format", parent: "technical" },
+            { id: "capabilities", label: "Capabilities Data", type: "format", parent: "technical" },
+            { id: "equipment", label: "Equipment Details", type: "format", parent: "technical" },
+            
+            // Communications formats
+            { id: "ipaddresses", label: "IP Addresses", type: "format", parent: "comms" },
+            { id: "scada", label: "SCADA Systems", type: "format", parent: "comms" },
+            { id: "networktopo", label: "Network Topology", type: "format", parent: "comms" },
+            
+            // Financial formats
+            { id: "valuations", label: "Asset Valuations", type: "format", parent: "financial" },
+            { id: "transactions", label: "Transactions", type: "format", parent: "financial" },
+            { id: "holdings", label: "Holdings Data", type: "format", parent: "financial" },
+            
+            // Activity formats
+            { id: "routes", label: "Smuggling Routes", type: "format", parent: "activity" },
+            { id: "movements", label: "Movements", type: "format", parent: "activity" },
+            { id: "meetings", label: "Meeting Data", type: "format", parent: "activity" },
+            
+            // Visual formats
+            { id: "photos", label: "Ground Photos", type: "format", parent: "visual" },
+            { id: "aerial", label: "Aerial Imagery", type: "format", parent: "visual" },
+            { id: "screenshots", label: "Screenshots", type: "format", parent: "visual" },
+            
+            // SIGINT formats
+            { id: "gsmwifi", label: "GSM/WiFi Mapping", type: "format", parent: "sigint" },
+            { id: "signalstrength", label: "Signal Strength Maps", type: "format", parent: "sigint" },
+            { id: "deviceids", label: "Device Identifiers", type: "format", parent: "sigint" },
+            { id: "wirelessnets", label: "Wireless Networks", type: "format", parent: "sigint" },
+            
+            // TECHINT formats
+            { id: "rdprojects", label: "R&D Projects", type: "format", parent: "techint" },
+            { id: "blueprints", label: "Technical Blueprints", type: "format", parent: "techint" },
+            { id: "specifications", label: "Tech Specifications", type: "format", parent: "techint" },
+            { id: "materials", label: "Materials Analysis", type: "format", parent: "techint" },
+            
+            // Protective Intelligence formats
+            { id: "threatassess", label: "Threat Assessments", type: "format", parent: "protective" },
+            { id: "vulnassess", label: "Vulnerability Assessments", type: "format", parent: "protective" },
+            { id: "riskmatrix", label: "Risk Matrices", type: "format", parent: "protective" },
+            { id: "execprotection", label: "Executive Protection", type: "format", parent: "protective" },
+            { id: "tscm", label: "TSCM Reports", type: "format", parent: "protective" },
+            
+            // Social Media/Reputation formats
+            { id: "socialmedia", label: "Social Media Analytics", type: "format", parent: "social" },
+            { id: "deepweb", label: "Deep Web Monitoring", type: "format", parent: "social" },
+            { id: "sentiment", label: "Sentiment Analysis", type: "format", parent: "social" },
+            { id: "influence", label: "Influence Mapping", type: "format", parent: "social" },
+            { id: "reputation", label: "Reputation Scores", type: "format", parent: "social" }
+        ];
+
+        const edges = [
+            // Format to category connections
+            { source: "gps", target: "geospatial", label: "provides" },
+            { source: "satellite", target: "geospatial", label: "provides" },
+            { source: "maps", target: "geospatial", label: "provides" },
+            { source: "infrastructure", target: "geospatial", label: "provides" },
+            { source: "bordercrossing", target: "geospatial", label: "provides" },
+            { source: "streetlevel", target: "geospatial", label: "provides" },
+            { source: "cameramapping", target: "geospatial", label: "provides" },
+            
+            { source: "timestamps", target: "temporal", label: "provides" },
+            { source: "timelines", target: "temporal", label: "provides" },
+            { source: "activitylogs", target: "temporal", label: "provides" },
+            
+            { source: "individuals", target: "entity", label: "provides" },
+            { source: "organizations", target: "entity", label: "provides" },
+            { source: "relationships", target: "entity", label: "provides" },
+            { source: "networks", target: "entity", label: "provides" },
+            
+            { source: "dronespecs", target: "technical", label: "provides" },
+            { source: "capabilities", target: "technical", label: "provides" },
+            { source: "equipment", target: "technical", label: "provides" },
+            
+            { source: "ipaddresses", target: "comms", label: "provides" },
+            { source: "scada", target: "comms", label: "provides" },
+            { source: "networktopo", target: "comms", label: "provides" },
+            
+            { source: "valuations", target: "financial", label: "provides" },
+            { source: "transactions", target: "financial", label: "provides" },
+            { source: "holdings", target: "financial", label: "provides" },
+            
+            { source: "routes", target: "activity", label: "provides" },
+            { source: "movements", target: "activity", label: "provides" },
+            { source: "meetings", target: "activity", label: "provides" },
+            
+            { source: "photos", target: "visual", label: "provides" },
+            { source: "aerial", target: "visual", label: "provides" },
+            { source: "screenshots", target: "visual", label: "provides" },
+            
+            { source: "gsmwifi", target: "sigint", label: "provides" },
+            { source: "signalstrength", target: "sigint", label: "provides" },
+            { source: "deviceids", target: "sigint", label: "provides" },
+            { source: "wirelessnets", target: "sigint", label: "provides" },
+            
+            { source: "rdprojects", target: "techint", label: "provides" },
+            { source: "blueprints", target: "techint", label: "provides" },
+            { source: "specifications", target: "techint", label: "provides" },
+            { source: "materials", target: "techint", label: "provides" },
+            
+            { source: "threatassess", target: "protective", label: "provides" },
+            { source: "vulnassess", target: "protective", label: "provides" },
+            { source: "riskmatrix", target: "protective", label: "provides" },
+            { source: "execprotection", target: "protective", label: "provides" },
+            { source: "tscm", target: "protective", label: "provides" },
+            
+            { source: "socialmedia", target: "social", label: "provides" },
+            { source: "deepweb", target: "social", label: "provides" },
+            { source: "sentiment", target: "social", label: "provides" },
+            { source: "influence", target: "social", label: "provides" },
+            { source: "reputation", target: "social", label: "provides" },
+            
+            // Inter-category relationships
+            { source: "geospatial", target: "activity", label: "locates" },
+            { source: "temporal", target: "activity", label: "timestamps" },
+            { source: "entity", target: "activity", label: "performs" },
+            { source: "visual", target: "geospatial", label: "validates" },
+            { source: "entity", target: "financial", label: "owns" },
+            { source: "technical", target: "entity", label: "operated by" },
+            { source: "comms", target: "technical", label: "controls" },
+            { source: "activity", target: "financial", label: "generates" },
+            { source: "geospatial", target: "visual", label: "captured at" },
+            { source: "temporal", target: "visual", label: "taken on" },
+            
+            // New category relationships
+            { source: "sigint", target: "activity", label: "tracks" },
+            { source: "sigint", target: "entity", label: "identifies" },
+            { source: "sigint", target: "comms", label: "intercepts" },
+            { source: "techint", target: "technical", label: "analyzes" },
+            { source: "techint", target: "entity", label: "capabilities of" },
+            { source: "protective", target: "entity", label: "protects from" },
+            { source: "protective", target: "activity", label: "prevents" },
+            { source: "social", target: "entity", label: "monitors" },
+            { source: "social", target: "activity", label: "influences" },
+            { source: "geospatial", target: "sigint", label: "correlates" },
+            { source: "protective", target: "social", label: "defends" },
+            
+            // Cross-format relationships
+            { source: "gps", target: "photos", label: "geotagged" },
+            { source: "individuals", target: "meetings", label: "attends" },
+            { source: "organizations", target: "holdings", label: "controls" },
+            { source: "routes", target: "maps", label: "plotted on" },
+            { source: "movements", target: "timestamps", label: "tracked by" },
+            { source: "ipaddresses", target: "infrastructure", label: "assigned to" },
+            { source: "dronespecs", target: "capabilities", label: "defines" },
+            { source: "gsmwifi", target: "movements", label: "correlates" },
+            { source: "cameramapping", target: "streetlevel", label: "enhances" },
+            { source: "rdprojects", target: "organizations", label: "developed by" },
+            { source: "threatassess", target: "individuals", label: "targets" },
+            { source: "socialmedia", target: "influence", label: "measures" },
+            { source: "deepweb", target: "entity", label: "discovers" },
+            { source: "blueprints", target: "equipment", label: "describes" },
+            { source: "tscm", target: "comms", label: "detects" }
+        ];
+
+        // Investigation type mappings
+        const investigations = {
+            "technical-collection": {
+                name: "Technical Collection Operations",
+                description: "GSM/WiFi mapping, infrastructure analysis",
+                nodes: ["sigint", "gsmwifi", "signalstrength", "deviceids", "wirelessnets", "comms", 
+                        "ipaddresses", "networktopo", "geospatial", "infrastructure", "bordercrossing"],
+                relatedEdges: ["sigint-activity", "sigint-entity", "sigint-comms"]
+            },
+            "rd-technical": {
+                name: "R&D/Technical Intelligence",
+                description: "Iranian R&D projects, blueprint collection",
+                nodes: ["techint", "rdprojects", "blueprints", "specifications", "materials", 
+                        "technical", "dronespecs", "capabilities", "equipment", "entity", "organizations"],
+                relatedEdges: ["techint-technical", "techint-entity", "rdprojects-organizations"]
+            },
+            "geospatial-collection": {
+                name: "Geospatial Collection",
+                description: "Street-level Syria, route mapping",
+                nodes: ["geospatial", "streetlevel", "gps", "maps", "infrastructure", "visual", 
+                        "photos", "aerial", "temporal", "timestamps", "activity", "routes"],
+                relatedEdges: ["geospatial-activity", "geospatial-visual", "routes-maps"]
+            },
+            "camera-mapping": {
+                name: "Camera Network Analysis",
+                description: "Hong Kong camera mapping example",
+                nodes: ["geospatial", "cameramapping", "visual", "photos", "gps", "infrastructure",
+                        "streetlevel", "protective", "vulnassess"],
+                relatedEdges: ["cameramapping-streetlevel", "visual-geospatial"]
+            },
+            "protective-intel": {
+                name: "Protective Intelligence",
+                description: "Target hardening, executive protection",
+                nodes: ["protective", "threatassess", "vulnassess", "riskmatrix", "execprotection", 
+                        "tscm", "entity", "individuals", "activity", "comms"],
+                relatedEdges: ["protective-entity", "protective-activity", "tscm-comms"]
+            },
+            "reputation-mgmt": {
+                name: "Reputation Management",
+                description: "Social media monitoring, influence ops",
+                nodes: ["social", "socialmedia", "deepweb", "sentiment", "influence", "reputation",
+                        "entity", "individuals", "organizations", "activity"],
+                relatedEdges: ["social-entity", "social-activity", "deepweb-entity"]
+            },
+            "tscm-operations": {
+                name: "TSCM Operations",
+                description: "Technical surveillance countermeasures",
+                nodes: ["protective", "tscm", "comms", "ipaddresses", "scada", "networktopo",
+                        "sigint", "deviceids", "technical"],
+                relatedEdges: ["tscm-comms", "sigint-comms", "comms-technical"]
+            }
+        };
+
+        // Set up SVG and create visualization
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        
+        const svg = d3.select("#graph")
+            .attr("width", width)
+            .attr("height", height)
+            .attr("viewBox", `0 0 ${width} ${height}`)
+            .attr("preserveAspectRatio", "xMidYMid meet");
+            
+        // Add zoom behavior
+        const g = svg.append("g");
+        
+        const zoom = d3.zoom()
+            .scaleExtent([0.5, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+            
+        svg.call(zoom);
+            
+        // Create tooltip
+        const tooltip = d3.select(".tooltip");
+        
+        // Create simulation
+        const simulation = d3.forceSimulation(nodes)
+            .force("link", d3.forceLink(edges).id(d => d.id).distance(100))
+            .force("charge", d3.forceManyBody().strength(-500))
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("collision", d3.forceCollide().radius(40))
+            .force("x", d3.forceX(width / 2).strength(0.05))
+            .force("y", d3.forceY(height / 2).strength(0.05));
+        
+        // Create edge elements
+        const edge = g.append("g")
+            .selectAll("line")
+            .data(edges)
+            .join("line")
+            .attr("class", "edge")
+            .attr("stroke", "#888")
+            .attr("stroke-width", 1.5);
+            
+        // Create edge labels
+        const edgeLabel = g.append("g")
+            .selectAll("text")
+            .data(edges)
+            .join("text")
+            .attr("class", "edge-label")
+            .text(d => d.label)
+            .attr("text-anchor", "middle")
+            .style("user-select", "none");
+        
+        // Create node elements
+        const node = g.append("g")
+            .selectAll("circle")
+            .data(nodes)
+            .join("circle")
+            .attr("class", "node")
+            .attr("r", d => d.type === "category" ? 25 : 15)
+            .attr("fill", d => d.parent ? nodes.find(n => n.id === d.parent).color : d.color)
+            .attr("stroke", "#fff")
+            .attr("stroke-width", 2)
+            .call(drag(simulation));
+            
+        // Create node labels
+        const nodeLabel = g.append("g")
+            .selectAll("text")
+            .data(nodes)
+            .join("text")
+            .attr("class", "node-label")
+            .text(d => d.label)
+            .attr("text-anchor", "middle")
+            .attr("dy", d => d.type === "category" ? 40 : 30)
+            .style("user-select", "none");
+        
+        // Node hover effects
+        node.on("mouseover", function(event, d) {
+            if (!currentInvestigation) {
+                tooltip.transition()
+                    .duration(200)
+                    .style("opacity", .9);
+                tooltip.html(`<strong>${d.label}</strong><br/>Type: ${d.type}<br/>Category: ${d.parent || 'Main Category'}`)
+                    .style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY - 28) + "px");
+                    
+                // Highlight connected edges
+                edge.style("stroke", e => (e.source.id === d.id || e.target.id === d.id) ? "#ffd700" : "#888")
+                    .style("stroke-width", e => (e.source.id === d.id || e.target.id === d.id) ? 3 : 1.5);
+            }
+        })
+        .on("mouseout", function(d) {
+            if (!currentInvestigation) {
+                tooltip.transition()
+                    .duration(500)
+                    .style("opacity", 0);
+                    
+                edge.style("stroke", "#888")
+                    .style("stroke-width", 1.5);
+            }
+        });
+        
+        // Update positions on tick
+        simulation.on("tick", () => {
+            // Apply bounds to keep nodes within view
+            nodes.forEach(d => {
+                d.x = Math.max(40, Math.min(width - 40, d.x));
+                d.y = Math.max(40, Math.min(height - 40, d.y));
+            });
+            
+            edge
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+                
+            edgeLabel
+                .attr("x", d => (d.source.x + d.target.x) / 2)
+                .attr("y", d => (d.source.y + d.target.y) / 2);
+                
+            node
+                .attr("cx", d => d.x)
+                .attr("cy", d => d.y);
+                
+            nodeLabel
+                .attr("x", d => d.x)
+                .attr("y", d => d.y);
+        });
+        
+        // Drag functions
+        function drag(simulation) {
+            function dragstarted(event) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                event.subject.fx = event.subject.x;
+                event.subject.fy = event.subject.y;
+            }
+            
+            function dragged(event) {
+                event.subject.fx = event.x;
+                event.subject.fy = event.y;
+            }
+            
+            function dragended(event) {
+                if (!event.active) simulation.alphaTarget(0);
+                event.subject.fx = null;
+                event.subject.fy = null;
+            }
+            
+            return d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended);
+        }
+        
+        // Create legend
+        const categories = nodes.filter(n => n.type === "category");
+        const legend = d3.select("#legend");
+        
+        categories.forEach(cat => {
+            const item = legend.append("div")
+                .attr("class", "legend-item");
+                
+            item.append("div")
+                .attr("class", "legend-color")
+                .style("background-color", cat.color);
+                
+            item.append("span")
+                .text(cat.label);
+        });
+        
+        // Create investigation buttons
+        const investigationSelector = d3.select("#investigation-selector");
+        let currentInvestigation = null;
+        
+        Object.keys(investigations).forEach(key => {
+            const inv = investigations[key];
+            const btn = investigationSelector.append("button")
+                .attr("class", "investigation-btn")
+                .attr("onclick", `highlightInvestigation('${key}')`);
+                
+            btn.append("div")
+                .text(inv.name);
+                
+            btn.append("div")
+                .attr("class", "investigation-desc")
+                .text(inv.description);
+        });
+        
+        // Investigation highlighting function
+        window.highlightInvestigation = function(investigationType) {
+            currentInvestigation = investigationType;
+            const inv = investigations[investigationType];
+            
+            // Update button states
+            d3.selectAll(".investigation-btn").classed("active", false);
+            d3.selectAll(".investigation-btn").each(function() {
+                if (this.textContent.includes(inv.name)) {
+                    d3.select(this).classed("active", true);
+                }
+            });
+            
+            // Highlight relevant nodes
+            node.classed("highlighted", d => inv.nodes.includes(d.id))
+                .classed("dimmed", d => !inv.nodes.includes(d.id));
+                
+            nodeLabel.classed("dimmed", d => !inv.nodes.includes(d.id));
+            
+            // Highlight relevant edges
+            edge.classed("highlighted", e => {
+                const sourceRelevant = inv.nodes.includes(e.source.id);
+                const targetRelevant = inv.nodes.includes(e.target.id);
+                return sourceRelevant && targetRelevant;
+            })
+            .classed("dimmed", e => {
+                const sourceRelevant = inv.nodes.includes(e.source.id);
+                const targetRelevant = inv.nodes.includes(e.target.id);
+                return !(sourceRelevant && targetRelevant);
+            });
+            
+            edgeLabel.classed("dimmed", e => {
+                const sourceRelevant = inv.nodes.includes(e.source.id);
+                const targetRelevant = inv.nodes.includes(e.target.id);
+                return !(sourceRelevant && targetRelevant);
+            });
+        };
+        
+        window.clearHighlight = function() {
+            currentInvestigation = null;
+            d3.selectAll(".investigation-btn").classed("active", false);
+            node.classed("highlighted", false).classed("dimmed", false);
+            nodeLabel.classed("dimmed", false);
+            edge.classed("highlighted", false).classed("dimmed", false);
+            edgeLabel.classed("dimmed", false);
+        };
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight;
+            
+            svg.attr("width", newWidth)
+               .attr("height", newHeight)
+               .attr("viewBox", `0 0 ${newWidth} ${newHeight}`);
+               
+            simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+    </script>
+</body>
+</html>
